@@ -14,8 +14,9 @@ model User {
   password  String
   createdAt DateTime @default(now())
 
-  auctions  Auction[]
-  bids      Bid[]
+  auctions     Auction[] @relation("SellerAuctions")
+  wonAuctions  Auction[] @relation("WonAuctions")
+  bids         Bid[]
 }
 
 model Auction {
@@ -27,13 +28,15 @@ model Auction {
   currentPrice Float
   startTime    DateTime
   endTime      DateTime
-  status       String   @default("active")
-  
+  status       String   @default("upcoming")
+
   sellerId     String
-  seller       User     @relation(fields: [sellerId], references: [id])
-  
+  seller       User     @relation("SellerAuctions", fields: [sellerId], references: [id])
+
+  winnerId     String?  // ← nullable because auction might end with no bids
+  winner       User?    @relation("WonAuctions", fields: [winnerId], references: [id])
+
   bids         Bid[]
-  
   createdAt    DateTime @default(now())
 }
 
