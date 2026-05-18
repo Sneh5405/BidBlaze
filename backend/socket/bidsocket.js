@@ -12,74 +12,61 @@ module.exports = (io) => {
     })
 
     // user places a bid
-    socket.on('place-bid', async (data) => {
-      const { auctionId, bidderId, amount } = data
+socket.on('place-bid', async (data) => {
+  const { auctionId, bidderId, amount } = data
 
-      try {
-        // fetch current auction
-        const auction = await prisma.auction.findUnique({
-          where: { id: auctionId }
-        })
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // fetch auction INSIDE transaction
+      const auction = await tx.auction.findUnique({
+        where: { id: auctionId }
+      })
 
-        // validations
-        if (!auction) {
-          socket.emit('bid-error', { message: 'Auction not found' })
-          return
-        }
+      // validations
+      if (!auction) throw new Error('Auction not found')
+      if (auction.status !== 'active') throw new Error('Auction is not active')
+      if (auction.sellerId === bidderId) throw new Error('You cannot bid on your own auction')
+      if (amount <= auction.currentPrice) throw new Error(`Bid must be higher than current price of ${auction.currentPrice}`)
 
-        if (auction.status !== 'active') {
-          socket.emit('bid-error', { message: 'Auction is not active' })
-          return
-        }
-
-        if (auction.sellerId === bidderId) {
-          socket.emit('bid-error', { message: 'You cannot bid on your own auction' })
-          return
-        }
-
-        if (amount <= auction.currentPrice) {
-          socket.emit('bid-error', {
-            message: `Bid must be higher than current price of ${auction.currentPrice}`
-          })
-          return
-        }
-
-        // save bid to database
-        const bid = await prisma.bid.create({
-          data: {
-            amount,
-            bidderId,
-            auctionId
-          },
-          include: {
-            bidder: {
-              select: { id: true, name: true }
-            }
+      // save bid to database
+      const bid = await tx.bid.create({
+        data: {
+          amount,
+          bidderId,
+          auctionId
+        },
+        include: {
+          bidder: {
+            select: { id: true, name: true }
           }
-        })
+        }
+      })
 
-        // update auction current price
-        await prisma.auction.update({
-          where: { id: auctionId },
-          data: { currentPrice: amount }
-        })
+      // update auction current price
+      const updatedAuction = await tx.auction.update({
+        where: { id: auctionId },
+        data: { currentPrice: amount }
+      })
 
-        // broadcast new bid to everyone in the auction room
-        io.to(auctionId).emit('bid-updated', {
-          auctionId,
-          currentPrice: amount,
-          bid: {
-            id: bid.id,
-            amount: bid.amount,
-            bidder: bid.bidder,
-            createdAt: bid.createdAt
-          }
-        })
+      return { bid, updatedAuction }
+    })
 
-      } catch (error) {
-        socket.emit('bid-error', { message: 'Something went wrong', error: error.message })
+    // broadcast new bid to everyone in the auction room
+    io.to(auctionId).emit('bid-updated', {
+      auctionId,
+      currentPrice: result.updatedAuction.currentPrice,
+      bid: {
+        id: result.bid.id,
+        amount: result.bid.amount,
+        bidder: result.bid.bidder,
+        createdAt: result.bid.createdAt
       }
     })
+
+  } catch (error) {
+    socket.emit('bid-error', { message: error.message })
+  }
+})
 
     // user leaves auction room
     socket.on('leave-auction', (auctionId) => {
