@@ -23,22 +23,23 @@ model User {
 }
 
 model Auction {
-  id           String    @id @default(uuid())
+  id           String   @id @default(uuid())
   title        String
   description  String
   images       String[]
+  category     String   @default("other")  // ← add this
   startPrice   Float
   currentPrice Float
   startTime    DateTime
   endTime      DateTime
-  status       String    @default("upcoming")
+  status       String   @default("upcoming")
   sellerId     String
-  seller       User      @relation("SellerAuctions", fields: [sellerId], references: [id])
+  seller       User     @relation("SellerAuctions", fields: [sellerId], references: [id])
   winnerId     String?
-  winner       User?     @relation("WonAuctions", fields: [winnerId], references: [id])
+  winner       User?    @relation("WonAuctions", fields: [winnerId], references: [id])
   bids         Bid[]
   chatRoom     ChatRoom?
-  createdAt    DateTime  @default(now())
+  createdAt    DateTime @default(now())
 }
 
 model Bid {

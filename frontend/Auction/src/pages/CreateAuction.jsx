@@ -5,12 +5,13 @@ import api from '../api/axios'
 const CreateAuction = () => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    startPrice: '',
-    startTime: '',
-    endTime: ''
-  })
+  title: '',
+  description: '',
+  category: '',  
+  startPrice: '',
+  startTime: '',
+  endTime: ''
+})
   const [images, setImages] = useState([])
   const [previews, setPreviews] = useState([])
   const [error, setError] = useState('')
@@ -95,7 +96,24 @@ const CreateAuction = () => {
               className='w-full bg-surface border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary transition-colors resize-none'
             />
           </div>
-
+          <div>
+            <label className='block text-gray-400 text-sm mb-2'>Category</label>
+            <select
+              name='category'
+              value={formData.category}
+              onChange={handleChange}
+              className='w-full bg-surface border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary transition-colors'
+            >
+              <option value='electronics'>Electronics</option>
+              <option value='fashion'>Fashion</option>
+              <option value='vehicles'>Vehicles</option>
+              <option value='art'>Art</option>
+              <option value='furniture'>Furniture</option>
+              <option value='sports'>Sports</option>
+              <option value='books'>Books</option>
+              <option value='other'>Other</option>
+            </select>
+          </div>
           <div>
             <label className='block text-gray-400 text-sm mb-2'>Starting Price (₹)</label>
             <input

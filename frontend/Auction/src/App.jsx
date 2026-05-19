@@ -10,7 +10,7 @@ import Dashboard from './pages/Dashboard'
 import ForgotPassword from './pages/ForgotPassword'
 import Messages from './pages/Messages'
 import Chat from './pages/Chat'
-
+import ErrorBoundary from './components/ErrorBoundary'
 
 // protected route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -21,6 +21,7 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
+    <ErrorBoundary>
       <Navbar />
       <main className='pt-20 max-w-7xl mx-auto px-4'>
         <Routes>
@@ -43,6 +44,7 @@ function App() {
           } />
         </Routes>
       </main>
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }

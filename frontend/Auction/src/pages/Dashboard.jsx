@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../api/axios'
 import useAuthStore from '../store/authStore'
+import { AuctionCardSkeleton, ProfileSkeleton } from '../components/Skeleton'
+import EmptyState from '../components/EmptyState'
 
 const Dashboard = () => {
   const { user } = useAuthStore()
@@ -43,8 +45,11 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className='min-h-screen flex items-center justify-center'>
-        <div className='text-gray-400'>Loading dashboard...</div>
+      <div className='py-8 space-y-6'>
+        <ProfileSkeleton />
+        <div className='space-y-4'>
+          {[...Array(3)].map((_, i) => <AuctionCardSkeleton key={i} />)}
+        </div>
       </div>
     )
   }
@@ -54,8 +59,8 @@ const Dashboard = () => {
 
       {/* profile header */}
       <div className='bg-card border border-surface rounded-2xl p-6 mb-8'>
-        <div className='flex items-center gap-4'>
-          <div className='w-16 h-16 bg-primary rounded-full flex items-center justify-center text-2xl font-bold text-white'>
+        <div className='flex items-center gap-4 flex-wrap'>
+          <div className='w-16 h-16 bg-primary rounded-full flex items-center justify-center text-2xl font-bold text-white flex-shrink-0'>
             {user?.name?.charAt(0).toUpperCase()}
           </div>
           <div>
@@ -80,7 +85,7 @@ const Dashboard = () => {
       </div>
 
       {/* tabs */}
-      <div className='flex gap-3 mb-6'>
+      <div className='flex gap-3 mb-6 flex-wrap'>
         {[
           { key: 'my-auctions', label: `My Auctions (${myAuctions.length})` },
           { key: 'my-bids', label: `My Bids (${myBids.length})` },
@@ -104,33 +109,37 @@ const Dashboard = () => {
       {activeTab === 'my-auctions' && (
         <div className='space-y-4'>
           {myAuctions.length === 0 ? (
-            <div className='text-center py-16'>
-              <p className='text-gray-400 mb-4'>You haven't listed any auctions yet</p>
-              <Link
-                to='/create-auction'
-                className='bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-orange-600 transition-colors'
-              >
-                List an Item
-              </Link>
-            </div>
+            <EmptyState
+              icon='🔨'
+              title="You haven't listed anything yet"
+              description='Start selling your items by creating your first auction'
+              action={{ href: '/create-auction', label: 'List an Item' }}
+            />
           ) : (
             myAuctions.map(auction => (
               <Link key={auction.id} to={`/auction/${auction.id}`}>
                 <div className='bg-card border border-surface hover:border-primary rounded-2xl p-5 flex items-center gap-5 transition-colors'>
-                  {auction.images?.[0] && (
+                  {auction.images?.[0] ? (
                     <img
                       src={auction.images[0]}
                       alt={auction.title}
-                      className='w-16 h-16 rounded-xl object-cover'
+                      className='w-16 h-16 rounded-xl object-cover flex-shrink-0'
                     />
+                  ) : (
+                    <div className='w-16 h-16 rounded-xl bg-surface flex items-center justify-center text-gray-500 flex-shrink-0'>
+                      🖼️
+                    </div>
                   )}
-                  <div className='flex-1'>
-                    <h3 className='text-white font-semibold'>{auction.title}</h3>
+                  <div className='flex-1 min-w-0'>
+                    <h3 className='text-white font-semibold truncate'>{auction.title}</h3>
+                    <p className='text-gray-400 text-sm capitalize'>{auction.category}</p>
                     <p className='text-gray-400 text-sm'>{auction._count?.bids} bids</p>
                   </div>
-                  <div className='text-right'>
-                    <p className='text-primary font-bold'>₹{auction.currentPrice.toLocaleString()}</p>
-                    <p className={`text-sm font-medium ${statusColors[auction.status]}`}>
+                  <div className='text-right flex-shrink-0'>
+                    <p className='text-primary font-bold'>
+                      ₹{auction.currentPrice.toLocaleString()}
+                    </p>
+                    <p className={`text-sm font-medium capitalize ${statusColors[auction.status]}`}>
                       {auction.status}
                     </p>
                   </div>
@@ -145,35 +154,49 @@ const Dashboard = () => {
       {activeTab === 'my-bids' && (
         <div className='space-y-4'>
           {myBids.length === 0 ? (
-            <div className='text-center py-16'>
-              <p className='text-gray-400 mb-4'>You haven't placed any bids yet</p>
-              <Link
-                to='/'
-                className='bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-orange-600 transition-colors'
-              >
-                Browse Auctions
-              </Link>
-            </div>
+            <EmptyState
+              icon='💰'
+              title="You haven't placed any bids"
+              description='Browse active auctions and start bidding on items you like'
+              action={{ href: '/', label: 'Browse Auctions' }}
+            />
           ) : (
             myBids.map(bid => (
               <Link key={bid.id} to={`/auction/${bid.auctionId}`}>
                 <div className='bg-card border border-surface hover:border-primary rounded-2xl p-5 flex items-center gap-5 transition-colors'>
-                  {bid.auction?.images?.[0] && (
+                  {bid.auction?.images?.[0] ? (
                     <img
                       src={bid.auction.images[0]}
                       alt={bid.auction.title}
-                      className='w-16 h-16 rounded-xl object-cover'
+                      className='w-16 h-16 rounded-xl object-cover flex-shrink-0'
                     />
+                  ) : (
+                    <div className='w-16 h-16 rounded-xl bg-surface flex items-center justify-center text-gray-500 flex-shrink-0'>
+                      🖼️
+                    </div>
                   )}
-                  <div className='flex-1'>
-                    <h3 className='text-white font-semibold'>{bid.auction?.title}</h3>
+                  <div className='flex-1 min-w-0'>
+                    <h3 className='text-white font-semibold truncate'>
+                      {bid.auction?.title}
+                    </h3>
                     <p className='text-gray-400 text-sm'>
                       Current price: ₹{bid.auction?.currentPrice.toLocaleString()}
                     </p>
+                    <p className='text-gray-500 text-xs'>
+                      {new Date(bid.createdAt).toLocaleDateString('en-IN')}
+                    </p>
                   </div>
-                  <div className='text-right'>
-                    <p className='text-white font-bold'>₹{bid.amount.toLocaleString()}</p>
-                    {bid.isWinning ? (
+                  <div className='text-right flex-shrink-0'>
+                    <p className='text-white font-bold'>
+                      ₹{bid.amount.toLocaleString()}
+                    </p>
+                    {bid.auction?.status === 'completed' ? (
+                      bid.auction?.winnerId === user?.id ? (
+                        <p className='text-green-400 text-sm font-medium'>Won 🏆</p>
+                      ) : (
+                        <p className='text-gray-400 text-sm'>Lost</p>
+                      )
+                    ) : bid.isWinning ? (
                       <p className='text-green-400 text-sm font-medium'>Winning 🏆</p>
                     ) : (
                       <p className='text-red-400 text-sm'>Outbid</p>
@@ -190,27 +213,37 @@ const Dashboard = () => {
       {activeTab === 'my-wins' && (
         <div className='space-y-4'>
           {myWins.length === 0 ? (
-            <div className='text-center py-16'>
-              <p className='text-gray-400'>You haven't won any auctions yet. Keep bidding!</p>
-            </div>
+            <EmptyState
+              icon='🏆'
+              title='No wins yet'
+              description='Keep bidding! Your winning auctions will appear here'
+              action={{ href: '/', label: 'Browse Auctions' }}
+            />
           ) : (
             myWins.map(auction => (
               <Link key={auction.id} to={`/auction/${auction.id}`}>
-                <div className='bg-card border border-primary rounded-2xl p-5 flex items-center gap-5'>
-                  {auction.images?.[0] && (
+                <div className='bg-card border border-primary rounded-2xl p-5 flex items-center gap-5 transition-colors hover:bg-primary hover:bg-opacity-5'>
+                  {auction.images?.[0] ? (
                     <img
                       src={auction.images[0]}
                       alt={auction.title}
-                      className='w-16 h-16 rounded-xl object-cover'
+                      className='w-16 h-16 rounded-xl object-cover flex-shrink-0'
                     />
+                  ) : (
+                    <div className='w-16 h-16 rounded-xl bg-surface flex items-center justify-center text-gray-500 flex-shrink-0'>
+                      🖼️
+                    </div>
                   )}
-                  <div className='flex-1'>
-                    <h3 className='text-white font-semibold'>{auction.title}</h3>
+                  <div className='flex-1 min-w-0'>
+                    <h3 className='text-white font-semibold truncate'>{auction.title}</h3>
                     <p className='text-gray-400 text-sm'>
                       Sold by {auction.seller?.name}
                     </p>
+                    <p className='text-gray-500 text-xs'>
+                      {new Date(auction.endTime).toLocaleDateString('en-IN')}
+                    </p>
                   </div>
-                  <div className='text-right'>
+                  <div className='text-right flex-shrink-0'>
                     <p className='text-primary font-bold text-lg'>
                       ₹{auction.bids?.[0]?.amount.toLocaleString()}
                     </p>

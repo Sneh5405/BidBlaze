@@ -24,7 +24,7 @@ app.get("/",(req,res)=>{
 });
 app.use("/auth",authRoutes);
 app.use('/auction', auctionRoutes)
-require('./socket/bidSocket')(io)
+require('./socket/bidSocket.js')(io)
 app.use('/user', userRoutes)
 app.use('/chat', chatRoutes)
 
