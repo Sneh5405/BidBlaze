@@ -64,7 +64,15 @@ const Login = () => {
             </div>
 
             <div>
-              <label className='block text-gray-400 text-sm mb-2'>Password</label>
+              <div className='flex items-center justify-between mb-2'>
+                <label className='block text-gray-400 text-sm'>Password</label>
+                <Link
+                  to='/forgot-password'
+                  className='text-primary text-sm hover:underline'
+                >
+                  Forgot Password?
+                </Link>
+              </div>
               <input
                 type='password'
                 name='password'
@@ -85,6 +93,21 @@ const Login = () => {
             </button>
 
           </form>
+
+          {/* divider */}
+          <div className='flex items-center gap-3 my-6'>
+            <div className='flex-1 h-px bg-surface' />
+            <span className='text-gray-500 text-sm'>or</span>
+            <div className='flex-1 h-px bg-surface' />
+          </div>
+
+          {/* login with otp */}
+          <Link
+            to='/forgot-password'
+            className='w-full flex items-center justify-center gap-2 border border-surface hover:border-primary text-gray-300 hover:text-white py-3 rounded-lg text-sm font-medium transition-colors'
+          >
+            🔐 Login with OTP instead
+          </Link>
 
           <p className='text-center text-gray-400 text-sm mt-6'>
             Don't have an account?{' '}

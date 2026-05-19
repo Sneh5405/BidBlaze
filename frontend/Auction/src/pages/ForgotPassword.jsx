@@ -3,23 +3,18 @@ import { Link, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import useAuthStore from '../store/authStore'
 
-const Signup = () => {
+const ForgotPassword = () => {
   const navigate = useNavigate()
   const { login } = useAuthStore()
 
-  const [step, setStep] = useState(1)  // 1 = form, 2 = otp
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' })
+  const [step, setStep] = useState(1)  // 1 = email, 2 = otp
+  const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [resendLoading, setResendLoading] = useState(false)
   const [resendTimer, setResendTimer] = useState(0)
+  const [resendLoading, setResendLoading] = useState(false)
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
-
-  // start resend countdown timer
   const startTimer = () => {
     setResendTimer(30)
     const interval = setInterval(() => {
@@ -37,7 +32,7 @@ const Signup = () => {
     setLoading(true)
 
     try {
-      await api.post('/auth/signup', formData)
+      await api.post('/auth/forgot-password', { email })
       setStep(2)
       startTimer()
     } catch (err) {
@@ -47,17 +42,14 @@ const Signup = () => {
     }
   }
 
-  // step 2 — verify OTP
+  // step 2 — verify OTP and login
   const handleVerifyOTP = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
 
     try {
-      const res = await api.post('/auth/verify-otp', {
-        email: formData.email,
-        otp
-      })
+      const res = await api.post('/auth/verify-login-otp', { email, otp })
       login(res.data.user, res.data.token)
       navigate('/')
     } catch (err) {
@@ -72,7 +64,7 @@ const Signup = () => {
     setResendLoading(true)
     setError('')
     try {
-      await api.post('/auth/resend-otp', { email: formData.email })
+      await api.post('/auth/forgot-password', { email })
       startTimer()
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to resend')
@@ -87,12 +79,12 @@ const Signup = () => {
 
         <div className='text-center mb-8'>
           <h1 className='text-3xl font-bold text-white mb-2'>
-            {step === 1 ? 'Create Account' : 'Verify Email'}
+            {step === 1 ? 'Forgot Password?' : 'Check Your Email'}
           </h1>
           <p className='text-gray-400'>
             {step === 1
-              ? 'Join BidBlaze and start bidding'
-              : `Enter the OTP sent to ${formData.email}`
+              ? 'Enter your email and we\'ll send you a login OTP'
+              : `We sent a 6-digit OTP to ${email}`
             }
           </p>
         </div>
@@ -116,45 +108,21 @@ const Signup = () => {
             </div>
           )}
 
-          {/* step 1 — signup form */}
+          {/* step 1 — email input */}
           {step === 1 && (
             <form onSubmit={handleSendOTP} className='space-y-5'>
               <div>
-                <label className='block text-gray-400 text-sm mb-2'>Full Name</label>
-                <input
-                  type='text'
-                  name='name'
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder='John Doe'
-                  required
-                  className='w-full bg-surface border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary transition-colors'
-                />
-              </div>
-              <div>
-                <label className='block text-gray-400 text-sm mb-2'>Email</label>
+                <label className='block text-gray-400 text-sm mb-2'>Email Address</label>
                 <input
                   type='email'
-                  name='email'
-                  value={formData.email}
-                  onChange={handleChange}
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
                   placeholder='john@example.com'
                   required
                   className='w-full bg-surface border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary transition-colors'
                 />
               </div>
-              <div>
-                <label className='block text-gray-400 text-sm mb-2'>Password</label>
-                <input
-                  type='password'
-                  name='password'
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder='Min 6 characters'
-                  required
-                  className='w-full bg-surface border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary transition-colors'
-                />
-              </div>
+
               <button
                 type='submit'
                 disabled={loading}
@@ -165,9 +133,22 @@ const Signup = () => {
             </form>
           )}
 
-          {/* step 2 — OTP verification */}
+          {/* step 2 — OTP input */}
           {step === 2 && (
             <form onSubmit={handleVerifyOTP} className='space-y-5'>
+
+              {/* email display */}
+              <div className='bg-surface rounded-xl px-4 py-3 flex items-center justify-between'>
+                <span className='text-gray-300 text-sm'>{email}</span>
+                <button
+                  type='button'
+                  onClick={() => { setStep(1); setOtp(''); setError('') }}
+                  className='text-primary text-xs hover:underline'
+                >
+                  Change
+                </button>
+              </div>
+
               <div>
                 <label className='block text-gray-400 text-sm mb-2'>Enter OTP</label>
                 <input
@@ -186,7 +167,7 @@ const Signup = () => {
                 disabled={loading || otp.length !== 6}
                 className='w-full bg-primary hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-3 rounded-lg transition-colors'
               >
-                {loading ? 'Verifying...' : 'Verify & Create Account'}
+                {loading ? 'Verifying...' : 'Login with OTP'}
               </button>
 
               {/* resend */}
@@ -206,20 +187,11 @@ const Signup = () => {
                   </button>
                 )}
               </div>
-
-              {/* go back */}
-              <button
-                type='button'
-                onClick={() => { setStep(1); setOtp(''); setError('') }}
-                className='w-full text-gray-400 hover:text-white text-sm transition-colors'
-              >
-                ← Change email or details
-              </button>
             </form>
           )}
 
           <p className='text-center text-gray-400 text-sm mt-6'>
-            Already have an account?{' '}
+            Remember your password?{' '}
             <Link to='/login' className='text-primary hover:underline'>Login</Link>
           </p>
 
@@ -229,4 +201,4 @@ const Signup = () => {
   )
 }
 
-export default Signup
+export default ForgotPassword

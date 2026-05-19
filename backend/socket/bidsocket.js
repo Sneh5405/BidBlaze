@@ -12,61 +12,70 @@ module.exports = (io) => {
     })
 
     // user places a bid
-socket.on('place-bid', async (data) => {
-  const { auctionId, bidderId, amount } = data
+    socket.on('place-bid', async (data) => {
+      const { auctionId, bidderId, amount } = data
 
-  try {
-    const result = await prisma.$transaction(async (tx) => {
-      // fetch auction INSIDE transaction
-      const auction = await tx.auction.findUnique({
-        where: { id: auctionId }
-      })
+      try {
+        // fetch auction (single read)
+        const auction = await prisma.auction.findUnique({
+          where: { id: auctionId }
+        })
 
-      // validations
-      if (!auction) throw new Error('Auction not found')
-      if (auction.status !== 'active') throw new Error('Auction is not active')
-      if (auction.sellerId === bidderId) throw new Error('You cannot bid on your own auction')
-      if (amount <= auction.currentPrice) throw new Error(`Bid must be higher than current price of ${auction.currentPrice}`)
-
-      // save bid to database
-      const bid = await tx.bid.create({
-        data: {
-          amount,
-          bidderId,
-          auctionId
-        },
-        include: {
-          bidder: {
-            select: { id: true, name: true }
-          }
+        // validations (in memory — no DB call)
+        if (!auction) {
+          return socket.emit('bid-error', { message: 'Auction not found' })
         }
-      })
+        if (auction.status !== 'active') {
+          return socket.emit('bid-error', { message: 'Auction is not active' })
+        }
+        if (auction.sellerId === bidderId) {
+          return socket.emit('bid-error', { message: 'You cannot bid on your own auction' })
+        }
+        if (amount <= auction.currentPrice) {
+          return socket.emit('bid-error', { message: `Bid must be higher than ₹${auction.currentPrice}` })
+        }
 
-      // update auction current price
-      const updatedAuction = await tx.auction.update({
-        where: { id: auctionId },
-        data: { currentPrice: amount }
-      })
+        // atomic update — only updates if amount is still higher
+        const updated = await prisma.auction.updateMany({
+          where: {
+            id: auctionId,
+            currentPrice: { lt: amount },
+            status: 'active'
+          },
+          data: { currentPrice: amount }
+        })
 
-      return { bid, updatedAuction }
-    })
+        // someone else bid higher in between
+        if (updated.count === 0) {
+          return socket.emit('bid-error', {
+            message: 'Someone placed a higher bid just now. Please try again.'
+          })
+        }
 
-    // broadcast new bid to everyone in the auction room
-    io.to(auctionId).emit('bid-updated', {
-      auctionId,
-      currentPrice: result.updatedAuction.currentPrice,
-      bid: {
-        id: result.bid.id,
-        amount: result.bid.amount,
-        bidder: result.bid.bidder,
-        createdAt: result.bid.createdAt
+        // save the bid
+        const bid = await prisma.bid.create({
+          data: { amount, bidderId, auctionId },
+          include: {
+            bidder: { select: { id: true, name: true } }
+          }
+        })
+
+        // broadcast to everyone in the auction room
+        io.to(auctionId).emit('bid-updated', {
+          auctionId,
+          currentPrice: amount,
+          bid: {
+            id: bid.id,
+            amount: bid.amount,
+            bidder: bid.bidder,
+            createdAt: bid.createdAt
+          }
+        })
+
+      } catch (error) {
+        socket.emit('bid-error', { message: error.message })
       }
     })
-
-  } catch (error) {
-    socket.emit('bid-error', { message: error.message })
-  }
-})
 
     // user leaves auction room
     socket.on('leave-auction', (auctionId) => {

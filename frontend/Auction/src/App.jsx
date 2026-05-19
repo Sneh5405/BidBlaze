@@ -7,6 +7,7 @@ import Signup from './pages/Signup'
 import AuctionDetail from './pages/AuctionDetail'
 import CreateAuction from './pages/CreateAuction'
 import Dashboard from './pages/Dashboard'
+import ForgotPassword from './pages/ForgotPassword'
 
 // protected route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -30,6 +31,7 @@ function App() {
           <Route path='/dashboard' element={
             <ProtectedRoute><Dashboard /></ProtectedRoute>
           } />
+          <Route path='/forgot-password' element={<ForgotPassword />} />
         </Routes>
       </main>
     </BrowserRouter>
