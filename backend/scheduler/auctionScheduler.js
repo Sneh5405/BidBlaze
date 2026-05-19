@@ -1,5 +1,6 @@
 const cron = require('node-cron')
 const prisma = require('../prisma/client')
+const { sendWinnerEmail, sendSellerEmail } = require('../config/mailer')
 
 const startAuctionScheduler = (io) => {
 

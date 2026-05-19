@@ -45,6 +45,11 @@ const Navbar = () => {
               Dashboard
             </Link>
           )}
+          {user && (
+            <Link to='/messages' className='text-gray-400 hover:text-white transition-colors'>
+              Messages
+            </Link>
+          )}
         </div>
 
         {/* auth buttons */}

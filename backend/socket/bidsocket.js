@@ -87,5 +87,54 @@ module.exports = (io) => {
     socket.on('disconnect', () => {
       console.log('User disconnected:', socket.id)
     })
+
+    // user joins chat room
+socket.on('join-chat', (roomId) => {
+  socket.join(`chat_${roomId}`)
+  console.log(`User ${socket.id} joined chat room ${roomId}`)
+})
+
+// user sends message
+socket.on('send-message', async (data) => {
+  const { roomId, senderId, content } = data
+
+  try {
+    // verify sender is part of this room
+    const room = await prisma.chatRoom.findUnique({
+      where: { id: roomId }
+    })
+
+    if (!room) return socket.emit('chat-error', { message: 'Room not found' })
+
+    if (room.sellerId !== senderId && room.winnerId !== senderId) {
+      return socket.emit('chat-error', { message: 'Not authorized' })
+    }
+
+    // save message
+    const message = await prisma.message.create({
+      data: { content, senderId, chatRoomId: roomId },
+      include: {
+        sender: { select: { id: true, name: true } }
+      }
+    })
+
+    // broadcast to both users in room
+    io.to(`chat_${roomId}`).emit('new-message', {
+      id: message.id,
+      content: message.content,
+      sender: message.sender,
+      createdAt: message.createdAt
+    })
+
+  } catch (error) {
+    socket.emit('chat-error', { message: error.message })
+  }
+})
+
+// user leaves chat room
+socket.on('leave-chat', (roomId) => {
+  socket.leave(`chat_${roomId}`)
+})
+
   })
 }

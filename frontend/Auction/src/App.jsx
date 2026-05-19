@@ -8,6 +8,9 @@ import AuctionDetail from './pages/AuctionDetail'
 import CreateAuction from './pages/CreateAuction'
 import Dashboard from './pages/Dashboard'
 import ForgotPassword from './pages/ForgotPassword'
+import Messages from './pages/Messages'
+import Chat from './pages/Chat'
+
 
 // protected route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -32,6 +35,12 @@ function App() {
             <ProtectedRoute><Dashboard /></ProtectedRoute>
           } />
           <Route path='/forgot-password' element={<ForgotPassword />} />
+          <Route path='/messages' element={
+            <ProtectedRoute><Messages /></ProtectedRoute>
+          } />
+          <Route path='/messages/:id' element={
+            <ProtectedRoute><Chat /></ProtectedRoute>
+          } />
         </Routes>
       </main>
     </BrowserRouter>

@@ -7,6 +7,7 @@ const auctionRoutes = require('./routes/auction')
 const { Server } = require('socket.io')
 const startAuctionScheduler = require('./scheduler/auctionScheduler')
 const userRoutes = require('./routes/user')
+const chatRoutes = require('./routes/chat')
 
 const server = http.createServer(app)
 const io = new Server(server, {
@@ -25,6 +26,7 @@ app.use("/auth",authRoutes);
 app.use('/auction', auctionRoutes)
 require('./socket/bidSocket')(io)
 app.use('/user', userRoutes)
+app.use('/chat', chatRoutes)
 
 server.listen(process.env.PORT || 5000, () => {
   console.log(`Server running on port ${process.env.PORT || 5000}`)

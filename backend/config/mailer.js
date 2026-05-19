@@ -28,5 +28,47 @@ const sendOTPEmail = async (email, otp, name) => {
     `
   })
 }
+const sendWinnerEmail = async (winner, seller, auction, amount) => {
+  await transporter.sendMail({
+    from: `"BidBlaze 🔨" <${process.env.EMAIL_USER}>`,
+    to: winner.email,
+    subject: `🏆 You won: ${auction.title}!`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a1a2e; color: #ffffff; padding: 40px; border-radius: 16px;">
+        <h1 style="color: #E85D24;">🔨 BidBlaze</h1>
+        <h2 style="color: #ffffff;">Congratulations ${winner.name}! 🏆</h2>
+        <p style="color: #9ca3af;">You won the auction for <strong style="color: #fff;">${auction.title}</strong> with a bid of <strong style="color: #E85D24;">₹${amount.toLocaleString()}</strong></p>
+        <div style="background: #0f3460; border: 2px solid #E85D24; border-radius: 12px; padding: 24px; margin: 24px 0;">
+          <p style="color: #9ca3af; margin: 0 0 8px;">Seller Contact</p>
+          <h3 style="color: #fff; margin: 0 0 4px;">${seller.name}</h3>
+          <p style="color: #E85D24; margin: 0;">${seller.email}</p>
+        </div>
+        <p style="color: #9ca3af; font-size: 14px;">Contact the seller to arrange payment and delivery. You can also chat with them directly on BidBlaze.</p>
+      </div>
+    `
+  })
+}
 
-module.exports = { sendOTPEmail }
+const sendSellerEmail = async (seller, winner, auction, amount) => {
+  await transporter.sendMail({
+    from: `"BidBlaze 🔨" <${process.env.EMAIL_USER}>`,
+    to: seller.email,
+    subject: `✅ Your auction ended: ${auction.title}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a1a2e; color: #ffffff; padding: 40px; border-radius: 16px;">
+        <h1 style="color: #E85D24;">🔨 BidBlaze</h1>
+        <h2 style="color: #ffffff;">Your auction has ended!</h2>
+        <p style="color: #9ca3af;">Your item <strong style="color: #fff;">${auction.title}</strong> sold for <strong style="color: #E85D24;">₹${amount.toLocaleString()}</strong></p>
+        <div style="background: #0f3460; border: 2px solid #E85D24; border-radius: 12px; padding: 24px; margin: 24px 0;">
+          <p style="color: #9ca3af; margin: 0 0 8px;">Winner Contact</p>
+          <h3 style="color: #fff; margin: 0 0 4px;">${winner.name}</h3>
+          <p style="color: #E85D24; margin: 0;">${winner.email}</p>
+        </div>
+        <p style="color: #9ca3af; font-size: 14px;">Contact the winner to arrange payment and delivery. You can also chat with them directly on BidBlaze.</p>
+      </div>
+    `
+  })
+}
+
+module.exports = { sendOTPEmail, sendWinnerEmail, sendSellerEmail }
+
