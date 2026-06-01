@@ -1,4 +1,5 @@
 const prisma = require('../prisma/client')
+const { schemas } = require('../middleware/validate')
 
 module.exports = (io) => {
 
@@ -13,7 +14,16 @@ module.exports = (io) => {
 
     // user places a bid
     socket.on('place-bid', async (data) => {
-      const { auctionId, bidderId, amount } = data
+
+      const result = schemas.placeBid.safeParse(data)
+      if (!result.success) {
+        return socket.emit('bid-error', {
+          message: result.error.errors[0].message
+        })
+      }
+
+      const { auctionId, bidderId, amount } = result.data
+
 
       try {
         // fetch auction (single read)
@@ -89,52 +99,59 @@ module.exports = (io) => {
     })
 
     // user joins chat room
-socket.on('join-chat', (roomId) => {
-  socket.join(`chat_${roomId}`)
-  console.log(`User ${socket.id} joined chat room ${roomId}`)
-})
-
-// user sends message
-socket.on('send-message', async (data) => {
-  const { roomId, senderId, content } = data
-
-  try {
-    // verify sender is part of this room
-    const room = await prisma.chatRoom.findUnique({
-      where: { id: roomId }
+    socket.on('join-chat', (roomId) => {
+      socket.join(`chat_${roomId}`)
+      console.log(`User ${socket.id} joined chat room ${roomId}`)
     })
 
-    if (!room) return socket.emit('chat-error', { message: 'Room not found' })
+    // user sends message
+    socket.on('send-message', async (data) => {
+      const result = schemas.sendMessage.safeParse(data)
+      if (!result.success) {
+        return socket.emit('chat-error', {
+          message: result.error.errors[0].message
+        })
+      }
 
-    if (room.sellerId !== senderId && room.winnerId !== senderId) {
-      return socket.emit('chat-error', { message: 'Not authorized' })
-    }
+      const { roomId, senderId, content } = result.data
 
-    // save message
-    const message = await prisma.message.create({
-      data: { content, senderId, chatRoomId: roomId },
-      include: {
-        sender: { select: { id: true, name: true } }
+      try {
+        // verify sender is part of this room
+        const room = await prisma.chatRoom.findUnique({
+          where: { id: roomId }
+        })
+
+        if (!room) return socket.emit('chat-error', { message: 'Room not found' })
+
+        if (room.sellerId !== senderId && room.winnerId !== senderId) {
+          return socket.emit('chat-error', { message: 'Not authorized' })
+        }
+
+        // save message
+        const message = await prisma.message.create({
+          data: { content, senderId, chatRoomId: roomId },
+          include: {
+            sender: { select: { id: true, name: true } }
+          }
+        })
+
+        // broadcast to both users in room
+        io.to(`chat_${roomId}`).emit('new-message', {
+          id: message.id,
+          content: message.content,
+          sender: message.sender,
+          createdAt: message.createdAt
+        })
+
+      } catch (error) {
+        socket.emit('chat-error', { message: error.message })
       }
     })
 
-    // broadcast to both users in room
-    io.to(`chat_${roomId}`).emit('new-message', {
-      id: message.id,
-      content: message.content,
-      sender: message.sender,
-      createdAt: message.createdAt
+    // user leaves chat room
+    socket.on('leave-chat', (roomId) => {
+      socket.leave(`chat_${roomId}`)
     })
-
-  } catch (error) {
-    socket.emit('chat-error', { message: error.message })
-  }
-})
-
-// user leaves chat room
-socket.on('leave-chat', (roomId) => {
-  socket.leave(`chat_${roomId}`)
-})
 
   })
 }
