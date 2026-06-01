@@ -143,7 +143,7 @@ const login = async (req, res) => {
 // FORGOT PASSWORD — send OTP
 const sendLoginOTP = async (req, res) => {
   const { email } = req.body
-
+  
   try {
     // check if user exists
     const user = await prisma.user.findUnique({ where: { email } })
