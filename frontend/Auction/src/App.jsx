@@ -14,8 +14,8 @@ import ErrorBoundary from './components/ErrorBoundary'
 
 // protected route wrapper
 const ProtectedRoute = ({ children }) => {
-  const { token } = useAuthStore()
-  return token ? children : <Navigate to='/login' />
+  const { user } = useAuthStore()
+  return user ? children : <Navigate to='/login' />
 }
 
 function App() {

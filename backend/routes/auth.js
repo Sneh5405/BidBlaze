@@ -6,7 +6,9 @@ const {
   resendOTP,
   login,
   sendLoginOTP,
-  verifyLoginOTP
+  verifyLoginOTP,
+  refresh,
+  logout
 } = require('../controllers/authController')
 
 router.post('/signup', sendOTP)
@@ -15,5 +17,7 @@ router.post('/resend-otp', resendOTP)
 router.post('/login', login)
 router.post('/forgot-password', sendLoginOTP)
 router.post('/verify-login-otp', verifyLoginOTP)
+router.post('/refresh', refresh)
+router.post('/logout', logout)
 
 module.exports = router

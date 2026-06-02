@@ -5,6 +5,15 @@ const prisma = require('../prisma/client')
 const { sendOTPEmail } = require('../config/mailer')
 const { saveOTP, getOTP, deleteOTP } = require('../utils/otpStore')
 
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+}
+
+const ACCESS_TOKEN_EXPIRY = 15 * 60 * 1000 // 15 minutes
+const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000 // 7 days
+
 // STEP 1 — send OTP
 const sendOTP = async (req, res) => {
   const { name, email, password } = req.body
@@ -62,16 +71,31 @@ const verifyOTP = async (req, res) => {
     // delete OTP from store
     deleteOTP(email)
 
-    // auto login — generate token
-    const token = jwt.sign(
+    // generate tokens
+    const accessToken = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    )
+    const refreshToken = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     )
 
+    // set cookies
+    res.cookie('access_token', accessToken, {
+      ...cookieOptions,
+      maxAge: ACCESS_TOKEN_EXPIRY
+    })
+    res.cookie('refresh_token', refreshToken, {
+      ...cookieOptions,
+      maxAge: REFRESH_TOKEN_EXPIRY,
+      path: '/auth/refresh'
+    })
+
     res.status(201).json({
       message: 'Account created successfully',
-      token,
       user: {
         id: user.id,
         name: user.name,
@@ -124,15 +148,31 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid password' })
     }
 
-    const token = jwt.sign(
+    // generate tokens
+    const accessToken = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    )
+    const refreshToken = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     )
 
+    // set cookies
+    res.cookie('access_token', accessToken, {
+      ...cookieOptions,
+      maxAge: ACCESS_TOKEN_EXPIRY
+    })
+    res.cookie('refresh_token', refreshToken, {
+      ...cookieOptions,
+      maxAge: REFRESH_TOKEN_EXPIRY,
+      path: '/auth/refresh'
+    })
+
     res.status(200).json({
       message: 'Login successful',
-      token,
       user: { id: user.id, name: user.name, email: user.email }
     })
 
@@ -190,12 +230,28 @@ const verifyLoginOTP = async (req, res) => {
     // OTP valid — delete it
     deleteOTP(`login_${email}`)
 
-    // generate token and login
-    const token = jwt.sign(
+    // generate tokens
+    const accessToken = jwt.sign(
+      { id: stored.userId, email: stored.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    )
+    const refreshToken = jwt.sign(
       { id: stored.userId, email: stored.email },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     )
+
+    // set cookies
+    res.cookie('access_token', accessToken, {
+      ...cookieOptions,
+      maxAge: ACCESS_TOKEN_EXPIRY
+    })
+    res.cookie('refresh_token', refreshToken, {
+      ...cookieOptions,
+      maxAge: REFRESH_TOKEN_EXPIRY,
+      path: '/auth/refresh'
+    })
 
     // fetch fresh user data
     const user = await prisma.user.findUnique({
@@ -205,7 +261,6 @@ const verifyLoginOTP = async (req, res) => {
 
     res.status(200).json({
       message: 'Logged in successfully',
-      token,
       user
     })
 
@@ -214,4 +269,41 @@ const verifyLoginOTP = async (req, res) => {
   }
 }
 
-module.exports = { sendOTP, verifyOTP, resendOTP, login, sendLoginOTP, verifyLoginOTP }
+// REFRESH TOKEN
+const refresh = async (req, res) => {
+  const refreshToken = req.cookies.refresh_token
+
+  if (!refreshToken) {
+    return res.status(401).json({ message: 'Refresh token not found' })
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET)
+    
+    // generate a new access token
+    const accessToken = jwt.sign(
+      { id: decoded.id, email: decoded.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    )
+
+    // update the access token cookie
+    res.cookie('access_token', accessToken, {
+      ...cookieOptions,
+      maxAge: ACCESS_TOKEN_EXPIRY
+    })
+
+    res.status(200).json({ message: 'Token refreshed' })
+  } catch (error) {
+    return res.status(401).json({ message: 'Invalid or expired refresh token' })
+  }
+}
+
+// LOGOUT
+const logout = async (req, res) => {
+  res.clearCookie('access_token', cookieOptions)
+  res.clearCookie('refresh_token', { ...cookieOptions, path: '/auth/refresh' })
+  res.status(200).json({ message: 'Logged out successfully' })
+}
+
+module.exports = { sendOTP, verifyOTP, resendOTP, login, sendLoginOTP, verifyLoginOTP, refresh, logout }
