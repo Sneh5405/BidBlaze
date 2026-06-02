@@ -1,4 +1,5 @@
 const prisma = require('../prisma/client')
+const { imagePresets } = require('../utils/cloudinaryHelper')
 
 // GET MY AUCTIONS (as seller)
 const getMyAuctions = async (req, res) => {
@@ -14,7 +15,13 @@ const getMyAuctions = async (req, res) => {
       orderBy: { createdAt: 'desc' }
     })
 
-    res.status(200).json(auctions)
+    // use preview size for dashboard
+    const optimized = auctions.map(auction => ({
+      ...auction,
+      images: auction.images.map(img => imagePresets.preview(img))
+    }))
+
+    res.status(200).json(optimized)
 
   } catch (error) {
     res.status(500).json({ message: 'Something went wrong', error: error.message })
@@ -48,7 +55,11 @@ const getMyBids = async (req, res) => {
     const bidsWithStatus = bids.map(bid => ({
       ...bid,
       isWinning: bid.auction.currentPrice === bid.amount &&
-                 bid.auction.status === 'active'
+        bid.auction.status === 'active',
+      auction: {
+        ...bid.auction,
+        images: bid.auction.images.map(img => imagePresets.preview(img))
+      }
     }))
 
     res.status(200).json(bidsWithStatus)
@@ -79,8 +90,11 @@ const getMyWins = async (req, res) => {
       orderBy: { updatedAt: 'desc' }
     })
 
-    res.status(200).json(wonAuctions)
-
+    const optimized = wonAuctions.map(auction => ({
+      ...auction,
+      images: auction.images.map(img => imagePresets.preview(img))
+    }))
+    res.status(200).json(optimized)
   } catch (error) {
     res.status(500).json({ message: 'Something went wrong', error: error.message })
   }
