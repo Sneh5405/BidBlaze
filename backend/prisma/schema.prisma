@@ -20,26 +20,41 @@ model User {
   sellerChats ChatRoom[] @relation("SellerChats")
   winnerChats ChatRoom[] @relation("WinnerChats")
   messages    Message[]
+
+  @@index([email])
 }
 
 model Auction {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   title        String
   description  String
   images       String[]
-  category     String   @default("other")  // ← add this
+  category     String    @default("other")
   startPrice   Float
   currentPrice Float
   startTime    DateTime
   endTime      DateTime
-  status       String   @default("upcoming")
+  status       String    @default("upcoming")
+
   sellerId     String
-  seller       User     @relation("SellerAuctions", fields: [sellerId], references: [id])
+  seller       User      @relation("SellerAuctions", fields: [sellerId], references: [id])
+
   winnerId     String?
-  winner       User?    @relation("WonAuctions", fields: [winnerId], references: [id])
+  winner       User?     @relation("WonAuctions", fields: [winnerId], references: [id])
+
   bids         Bid[]
   chatRoom     ChatRoom?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
+
+  @@index([status])
+  @@index([category])
+  @@index([sellerId])
+  @@index([winnerId])
+  @@index([endTime])
+  @@index([startTime])
+  @@index([createdAt])
+  @@index([status, category])     // combined — for filtered browsing
+  @@index([status, createdAt])    // combined — for sorted filtered lists
 }
 
 model Bid {
@@ -52,25 +67,44 @@ model Bid {
 
   auctionId String
   auction   Auction  @relation(fields: [auctionId], references: [id])
+
+  @@index([auctionId])
+  @@index([bidderId])
+  @@index([auctionId, amount])    // combined — for finding highest bid fast
+  @@index([bidderId, createdAt])  // combined — for my bids sorted by date
 }
+
 model ChatRoom {
   id        String   @id @default(uuid())
   auctionId String   @unique
   auction   Auction  @relation(fields: [auctionId], references: [id])
+
   sellerId  String
   seller    User     @relation("SellerChats", fields: [sellerId], references: [id])
+
   winnerId  String
   winner    User     @relation("WinnerChats", fields: [winnerId], references: [id])
+
   messages  Message[]
   createdAt DateTime @default(now())
+
+  @@index([sellerId])
+  @@index([winnerId])
+  @@index([sellerId, winnerId])   // combined — for finding rooms by both users
 }
 
 model Message {
   id         String   @id @default(uuid())
   content    String
+  createdAt  DateTime @default(now())
+
   senderId   String
   sender     User     @relation(fields: [senderId], references: [id])
+
   chatRoomId String
   chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id])
-  createdAt  DateTime @default(now())
+
+  @@index([chatRoomId])
+  @@index([senderId])
+  @@index([chatRoomId, createdAt]) // combined — for messages sorted by time
 }

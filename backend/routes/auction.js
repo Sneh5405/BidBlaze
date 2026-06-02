@@ -8,13 +8,23 @@ const {
   getAuctionById,
   deleteAuction
 } = require('../controllers/auctionController')
+const {
+  createAuctionLimiter,
+  uploadLimiter
+} = require('../middleware/rateLimiter')
+const { validate, schemas } = require('../middleware/validate')
 
-// public routes — anyone can view
 router.get('/all', getAllAuctions)
 router.get('/:id', getAuctionById)
-
-// protected routes — must be logged in
-router.post('/create', authMiddleware, upload.array('images', 5), createAuction)
+router.post(
+  '/create',
+  authMiddleware,
+  createAuctionLimiter,
+  uploadLimiter,
+  upload.array('images', 5),
+  validate(schemas.createAuction),  // ← validates all auction fields
+  createAuction
+)
 router.delete('/:id', authMiddleware, deleteAuction)
 
-module.exports = router
+module.exports = router 

@@ -6,8 +6,8 @@ const { sendOTPEmail } = require('../config/mailer')
 const { saveOTP, getOTP, deleteOTP } = require('../utils/otpStore')
 
 const cookieOptions = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  httpOnly: false,
+  secure: true,
   sameSite: 'lax',
 }
 
@@ -183,7 +183,7 @@ const login = async (req, res) => {
 // FORGOT PASSWORD — send OTP
 const sendLoginOTP = async (req, res) => {
   const { email } = req.body
-  
+
   try {
     // check if user exists
     const user = await prisma.user.findUnique({ where: { email } })
@@ -279,7 +279,7 @@ const refresh = async (req, res) => {
 
   try {
     const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET)
-    
+
     // generate a new access token
     const accessToken = jwt.sign(
       { id: decoded.id, email: decoded.email },
