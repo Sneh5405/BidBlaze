@@ -36,6 +36,7 @@ const CreateAuction = () => {
       const data = new FormData()
       data.append('title', formData.title)
       data.append('description', formData.description)
+      data.append('category', formData.category)
       data.append('startPrice', formData.startPrice)
       data.append('startTime', formData.startTime)
       data.append('endTime', formData.endTime)

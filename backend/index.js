@@ -10,7 +10,7 @@ const { Server } = require('socket.io')
 const startAuctionScheduler = require('./scheduler/auctionScheduler')
 const userRoutes = require('./routes/user')
 const chatRoutes = require('./routes/chat')
-const apiLimiter = require('./middleware/rateLimiter')
+const { apiLimiter } = require('./middleware/rateLimiter')
 const server = http.createServer(app)
 const compression = require('compression')
 const redis = require('./config/redis')
@@ -29,7 +29,7 @@ app.use(apiLimiter);
 app.get("/", (req, res) => {
   res.send("This is Entry Portal");
 });
-redis.connect();
+// redis is connected automatically by ioredis on initialization
 app.use("/auth", authRoutes);
 app.use('/auction', auctionRoutes)
 require('./socket/bidSocket.js')(io)

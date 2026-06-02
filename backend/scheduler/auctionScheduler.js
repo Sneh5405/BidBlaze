@@ -63,6 +63,23 @@ const startAuctionScheduler = (io) => {
           }
         })
 
+        // create chat room if winner exists
+        if (highestBid) {
+          const existingRoom = await prisma.chatRoom.findUnique({
+            where: { auctionId: auction.id }
+          })
+          if (!existingRoom) {
+            await prisma.chatRoom.create({
+              data: {
+                auctionId: auction.id,
+                sellerId: auction.sellerId,
+                winnerId: highestBid.bidderId
+              }
+            })
+            console.log(`Created chat room for auction: ${auction.title}`)
+          }
+        }
+
         // notify everyone in the auction room
         io.to(auction.id).emit('auction-ended', {
           auctionId: auction.id,

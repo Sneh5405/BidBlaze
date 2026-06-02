@@ -102,7 +102,7 @@ const getMyWins = async (req, res) => {
           take: 1  // just the winning bid amount
         }
       },
-      orderBy: { updatedAt: 'desc' }
+      orderBy: { endTime: 'desc' }
     })
 
     const optimized = wonAuctions.map(auction => ({

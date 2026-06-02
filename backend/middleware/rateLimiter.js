@@ -1,4 +1,4 @@
-const rateLimit = require('express-rate-limit')
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit')
 
 // ─── GENERAL API ──────────────────────────────────────────────
 // applies to all routes — generous limit
@@ -46,7 +46,7 @@ const bidLimiter = rateLimit({
   keyGenerator: (req) => {
     // rate limit per user not per IP
     // user id comes from JWT via authMiddleware
-    return req.user?.id || req.ip
+    return req.user?.id || ipKeyGenerator(req.ip)
   },
   message: {
     message: 'You are bidding too fast, please slow down'
@@ -60,7 +60,7 @@ const createAuctionLimiter = rateLimit({
   max: 10,                    // max 10 auctions per hour
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id || req.ip,
+  keyGenerator: (req) => req.user?.id || ipKeyGenerator(req.ip),
   message: {
     message: 'You have created too many auctions, please try again after an hour'
   }
@@ -73,7 +73,7 @@ const uploadLimiter = rateLimit({
   max: 30,                    // 30 uploads per hour
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id || req.ip,
+  keyGenerator: (req) => req.user?.id || ipKeyGenerator(req.ip),
   message: {
     message: 'Too many image uploads, please try again after an hour'
   }

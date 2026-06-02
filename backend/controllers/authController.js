@@ -6,8 +6,8 @@ const { sendOTPEmail } = require('../config/mailer')
 const { saveOTP, getOTP, deleteOTP } = require('../utils/otpStore')
 
 const cookieOptions = {
-  httpOnly: false,
-  secure: true,
+  httpOnly: true,
+  secure: false,
   sameSite: 'lax',
 }
 

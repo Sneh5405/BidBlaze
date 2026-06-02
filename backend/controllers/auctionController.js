@@ -180,6 +180,10 @@ const getAuctionById = async (req, res) => {
       }
     })
 
+    if (!auction) {
+      return res.status(404).json({ message: 'Auction not found' })
+    }
+
     // use larger images for detail page
     const optimizedAuction = {
       ...auction,
