@@ -7,10 +7,6 @@ const redis = new Redis({
 })
 
 redis.on('error', (err) => console.error('Redis error:', err.message))
-redis.on('connect', () => console.log('Redis connected'))
-
-redis.connect().catch((err) => {
-  console.error('Redis connection failed:', err.message)
-})
+redis.on('connect', () => console.log('Redis connected ✅'))
 
 module.exports = redis

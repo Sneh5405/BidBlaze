@@ -1,5 +1,7 @@
 const prisma = require('../prisma/client')
 const cloudinary = require('../config/cloudinary')
+const { getCache, setCache, deleteCache, deleteCachePattern, CACHE_KEYS, TTL } = require('../utils/cache')
+const { imagePresets } = require('../utils/cloudinaryHelper')
 
 // CREATE AUCTION
 const createAuction = async (req, res) => {
@@ -52,6 +54,12 @@ const createAuction = async (req, res) => {
       }
     })
 
+    // Invalidate caches
+    await Promise.all([
+      deleteCachePattern('auctions:all:*'),
+      deleteCache(CACHE_KEYS.myAuctions(sellerId))
+    ])
+
     res.status(201).json({ message: 'Auction created successfully', auction })
 
   } catch (error) {
@@ -73,6 +81,21 @@ const getAllAuctions = async (req, res) => {
     const pageNum = parseInt(page)
     const limitNum = parseInt(limit)
     const skip = (pageNum - 1) * limitNum
+
+    // check cache first
+    const normalizedQuery = {
+      page: pageNum,
+      limit: limitNum,
+      search: search || '',
+      category: category || '',
+      status: status || ''
+    }
+    const cacheKey = CACHE_KEYS.allAuctions(normalizedQuery)
+    const cached = await getCache(cacheKey)
+    if (cached) {
+      console.log('Cache hit: getAllAuctions')
+      return res.status(200).json(cached)
+    }
 
     // build filter dynamically
     const where = {}
@@ -102,8 +125,13 @@ const getAllAuctions = async (req, res) => {
       prisma.auction.count({ where })
     ])
 
-    res.status(200).json({
-      auctions,
+    const optimizedAuctions = auctions.map(auction => ({
+      ...auction,
+      images: auction.images.map(img => imagePresets.thumbnail(img))
+    }))
+
+    const response = {
+      auctions: optimizedAuctions,
       pagination: {
         total,
         page: pageNum,
@@ -112,7 +140,10 @@ const getAllAuctions = async (req, res) => {
         hasNext: pageNum < Math.ceil(total / limitNum),
         hasPrev: pageNum > 1
       }
-    })
+    }
+
+    await setCache(cacheKey, response, TTL.allAuctions)
+    res.status(200).json(response)
 
   } catch (error) {
     res.status(500).json({ message: 'Something went wrong', error: error.message })
@@ -123,6 +154,13 @@ const getAuctionById = async (req, res) => {
   const { id } = req.params
 
   try {
+    const cacheKey = CACHE_KEYS.singleAuction(id)
+    const cached = await getCache(cacheKey)
+    if (cached) {
+      console.log('Cache hit: getAuctionById')
+      return res.status(200).json(cached)
+    }
+
     const auction = await prisma.auction.findUnique({
       where: { id },
       include: {
@@ -142,11 +180,13 @@ const getAuctionById = async (req, res) => {
       }
     })
 
-    if (!auction) {
-      return res.status(404).json({ message: 'Auction not found' })
+    // use larger images for detail page
+    const optimizedAuction = {
+      ...auction,
+      images: auction.images.map(img => imagePresets.detail(img))
     }
-
-    res.status(200).json(auction)
+    await setCache(cacheKey, optimizedAuction, TTL.singleAuction)
+    res.status(200).json(optimizedAuction)
 
   } catch (error) {
     res.status(500).json({ message: 'Something went wrong', error: error.message })
@@ -190,6 +230,13 @@ const deleteAuction = async (req, res) => {
     }
 
     await prisma.auction.delete({ where: { id } })
+
+    // Invalidate caches
+    await Promise.all([
+      deleteCachePattern('auctions:all:*'),
+      deleteCache(CACHE_KEYS.singleAuction(id)),
+      deleteCache(CACHE_KEYS.myAuctions(userId))
+    ])
 
     res.status(200).json({ message: 'Auction deleted successfully' })
 

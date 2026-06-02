@@ -1,5 +1,6 @@
 const prisma = require('../prisma/client')
 const { schemas } = require('../middleware/validate')
+const { deleteCache, deleteCachePattern, CACHE_KEYS } = require('../utils/cache')
 
 module.exports = (io) => {
 
@@ -69,6 +70,13 @@ module.exports = (io) => {
             bidder: { select: { id: true, name: true } }
           }
         })
+
+        // Invalidate caches
+        await Promise.all([
+          deleteCache(CACHE_KEYS.singleAuction(auctionId)),
+          deleteCachePattern('auctions:all:*'),
+          deleteCache(CACHE_KEYS.myBids(bidderId))
+        ])
 
         // broadcast to everyone in the auction room
         io.to(auctionId).emit('bid-updated', {

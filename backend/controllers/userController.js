@@ -1,11 +1,16 @@
 const prisma = require('../prisma/client')
 const { imagePresets } = require('../utils/cloudinaryHelper')
+const { getCache, setCache, CACHE_KEYS, TTL } = require('../utils/cache')
 
 // GET MY AUCTIONS (as seller)
 const getMyAuctions = async (req, res) => {
   const userId = req.user.id
 
   try {
+    const cacheKey = CACHE_KEYS.myAuctions(userId)
+    const cached = await getCache(cacheKey)
+    if (cached) return res.status(200).json(cached)
+
     const auctions = await prisma.auction.findMany({
       where: { sellerId: userId },
       include: {
@@ -21,6 +26,7 @@ const getMyAuctions = async (req, res) => {
       images: auction.images.map(img => imagePresets.preview(img))
     }))
 
+    await setCache(cacheKey, optimized, TTL.myAuctions)
     res.status(200).json(optimized)
 
   } catch (error) {
@@ -33,6 +39,10 @@ const getMyBids = async (req, res) => {
   const userId = req.user.id
 
   try {
+    const cacheKey = CACHE_KEYS.myBids(userId)
+    const cached = await getCache(cacheKey)
+    if (cached) return res.status(200).json(cached)
+
     const bids = await prisma.bid.findMany({
       where: { bidderId: userId },
       include: {
@@ -62,6 +72,7 @@ const getMyBids = async (req, res) => {
       }
     }))
 
+    await setCache(cacheKey, bidsWithStatus, TTL.myBids)
     res.status(200).json(bidsWithStatus)
 
   } catch (error) {
@@ -74,6 +85,10 @@ const getMyWins = async (req, res) => {
   const userId = req.user.id
 
   try {
+    const cacheKey = CACHE_KEYS.myWins(userId)
+    const cached = await getCache(cacheKey)
+    if (cached) return res.status(200).json(cached)
+
     const wonAuctions = await prisma.auction.findMany({
       where: {
         winnerId: userId,
@@ -94,6 +109,7 @@ const getMyWins = async (req, res) => {
       ...auction,
       images: auction.images.map(img => imagePresets.preview(img))
     }))
+    await setCache(cacheKey, optimized, TTL.myWins)
     res.status(200).json(optimized)
   } catch (error) {
     res.status(500).json({ message: 'Something went wrong', error: error.message })
@@ -105,6 +121,10 @@ const getMyProfile = async (req, res) => {
   const userId = req.user.id
 
   try {
+    const cacheKey = CACHE_KEYS.userProfile(userId)
+    const cached = await getCache(cacheKey)
+    if (cached) return res.status(200).json(cached)
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -121,6 +141,7 @@ const getMyProfile = async (req, res) => {
       }
     })
 
+    await setCache(cacheKey, user, TTL.userProfile)
     res.status(200).json(user)
 
   } catch (error) {

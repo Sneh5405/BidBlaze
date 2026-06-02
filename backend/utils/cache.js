@@ -58,10 +58,18 @@ const deleteCache = async (key) => {
 // used when auction is updated — clear all auction list caches
 const deleteCachePattern = async (pattern) => {
     try {
-        const keys = await redis.keys(pattern)
-        if (keys.length > 0) {
-            await redis.del(...keys)
-            console.log(`Cleared ${keys.length} cache keys matching: ${pattern}`)
+        let cursor = '0'
+        let allKeys = []
+        do {
+            const res = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100)
+            cursor = res[0]
+            const keys = res[1]
+            allKeys.push(...keys)
+        } while (cursor !== '0')
+
+        if (allKeys.length > 0) {
+            await redis.del(...allKeys)
+            console.log(`Cleared ${allKeys.length} cache keys matching: ${pattern}`)
         }
     } catch (error) {
         console.error('Cache pattern delete error:', error.message)

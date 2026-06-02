@@ -81,7 +81,7 @@ const startAuctionScheduler = (io) => {
     }
   })
 
-  console.log('Auction scheduler started ✅')
+  console.log('Auction scheduler started')
 }
 
 module.exports = startAuctionScheduler
