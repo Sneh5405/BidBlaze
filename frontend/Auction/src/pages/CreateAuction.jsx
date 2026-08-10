@@ -5,13 +5,13 @@ import api from '../api/axios'
 const CreateAuction = () => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
-  title: '',
-  description: '',
-  category: '',  
-  startPrice: '',
-  startTime: '',
-  endTime: ''
-})
+    title: '',
+    description: '',
+    category: 'electronics',
+    startPrice: '',
+    startTime: '',
+    endTime: ''
+  })
   const [images, setImages] = useState([])
   const [previews, setPreviews] = useState([])
   const [error, setError] = useState('')
@@ -42,9 +42,7 @@ const CreateAuction = () => {
       data.append('endTime', formData.endTime)
       images.forEach(img => data.append('images', img))
 
-      const res = await api.post('/auction/create', data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
+      const res = await api.post('/auction/create', data)
 
       navigate(`/auction/${res.data.auction.id}`)
 

@@ -26,9 +26,12 @@ const validate = (schema) => (req, res, next) => {
     schema.parse(req.body)
     next()
   } catch (error) {
+    const issues = error.issues || error.errors || []
+    const firstMessage = issues[0]?.message || error.message || 'Validation failed'
+    console.error('Validation failed for body:', req.body, 'Issues:', issues)
     return res.status(400).json({
-      message: error.errors[0]?.message || 'Validation failed',
-      errors: error.errors
+      message: firstMessage,
+      errors: issues
     })
   }
 }

@@ -30,26 +30,28 @@ const createAuction = async (req, res) => {
     const end = new Date(endTime)
     const now = new Date()
 
-    if (start <= now) {
-      return res.status(400).json({ message: 'Start time must be in the future' })
-    }
-
     if (end <= start) {
       return res.status(400).json({ message: 'End time must be after start time' })
     }
+
+    if (end <= now) {
+      return res.status(400).json({ message: 'End time must be in the future' })
+    }
+
+    const status = start <= now ? 'active' : 'upcoming'
 
     // create auction in database
     const auction = await prisma.auction.create({
       data: {
         title,
         description,
-        category: category || 'other',   // ← added
+        category: category || 'other',
         images: imageUrls,
         startPrice: parseFloat(startPrice),
         currentPrice: parseFloat(startPrice),
         startTime: start,
         endTime: end,
-        status: 'upcoming',
+        status,
         sellerId
       }
     })
